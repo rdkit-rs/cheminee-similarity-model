@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 tensorflow = "0.21.0"
+bitvec = "1"

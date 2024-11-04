@@ -1,5 +1,8 @@
+use csv::ReaderBuilder;
+use ndarray::Array2;
+use std::fs::File;
 use bitvec::vec::BitVec;
-use tensorflow::{Graph, SavedModelBundle, SessionOptions, SessionRunArgs, Tensor};
+use tensorflow::{DataType, Graph, ops, SavedModelBundle, Scope, Session, SessionOptions, SessionRunArgs, Tensor};
 
 pub fn load_encoder_model() -> (SavedModelBundle, Graph) {
     let model_dir = "assets/vae_encoder";
@@ -23,6 +26,74 @@ pub fn encode(model: SavedModelBundle, graph: Graph, input_data: BitVec) -> Tens
     model.session.run(&mut run_args).unwrap();
 
     let output_tensor = run_args.fetch(output_token).unwrap();
+    let output_slice = &output_tensor.iter().as_slice()[..128];
+    let lf_tensor = Tensor::new(&[1, 128]).with_values(output_slice).unwrap();
 
-    output_tensor
+    lf_tensor
+}
+
+pub fn load_cluster_centroids() -> Tensor<f32> {
+    let file = File::open("assets/lf_kmeans_10k_centroids_20241025.csv").unwrap();
+    let mut rdr = ReaderBuilder::new().has_headers(false).from_reader(file);
+
+    let mut data: Vec<Vec<f32>> = Vec::new();
+    for result in rdr.records() {
+        let record = result.unwrap();
+        let row: Vec<f32> = record.iter()
+            .map(|s| s.parse().unwrap())
+            .collect();
+        data.push(row);
+    }
+
+    let array: Array2<f32> = Array2::from_shape_vec((data.len(), data[0].len()), data.concat()).unwrap();
+
+    let tensor = Tensor::new(&[array.shape()[0] as u64, array.shape()[1] as u64])
+        .with_values(array.as_slice().unwrap()).unwrap();
+
+    tensor
+}
+
+pub fn assign_cluster_labels(centroids: Tensor<f32>, lf_array: Tensor<f32>) -> Tensor<f32> {
+    let mut scope = Scope::new_root_scope();
+    let mut run_args = SessionRunArgs::new();
+
+    let centroids_input = ops::Placeholder::new()
+        .dtype(DataType::Float)
+        .shape(centroids.dims())
+        .build(&mut scope).unwrap();
+
+    let lf_input = ops::Placeholder::new()
+        .dtype(DataType::Float)
+        .shape(lf_array.dims())
+        .build(&mut scope).unwrap();
+
+    run_args.add_feed(&centroids_input, 0, &centroids);
+    run_args.add_feed(&lf_input, 0, &lf_array);
+
+    let diff = ops::Sub::new()
+        .build(centroids_input, lf_input, &mut scope).unwrap();
+
+    let squared_diff = ops::Square::new()
+        .build(diff, &mut scope).unwrap();
+
+    let axis_tensor = ops::Const::new().dtype(DataType::Int32).value(Tensor::new(&[1]).with_values(&[1]).unwrap()).build(&mut scope).unwrap();
+
+    let mean_squared_diff = ops::Mean::new()
+        .build(squared_diff, axis_tensor, &mut scope).unwrap();
+
+    let distance = ops::Sqrt::new()
+        .build(mean_squared_diff, &mut scope).unwrap();
+
+    let graph = scope.graph();
+    let session = Session::new(&SessionOptions::new(), &graph).unwrap();
+
+    let distance_token = run_args.request_fetch(&distance, 0);
+    session.run(&mut run_args).unwrap();
+
+    let distance_tensor = run_args.fetch(distance_token).unwrap();
+
+
+    // At this point need to get argsort of distances and return labels
+
+    distance_tensor
 }

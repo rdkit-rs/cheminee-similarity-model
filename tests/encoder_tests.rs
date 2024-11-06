@@ -1,5 +1,5 @@
 use bitvec::prelude::*;
-use cheminee_similarity_weights::encoder::{assign_cluster_labels, encode, load_cluster_centroids, load_encoder_model};
+use cheminee_similarity_weights::encoder::ENCODER_MODEL;
 
 #[test]
 fn test_encode() {
@@ -73,10 +73,7 @@ fn test_encode() {
         0, 0
     ];
 
-    let (encoder_model, encoder_graph) = load_encoder_model();
-    let centroids = load_cluster_centroids();
-    let lf_array = encode(&encoder_model, &encoder_graph, &input_data);
-    let ranked_cluster_labels = assign_cluster_labels(&centroids, &lf_array);
+    let ranked_cluster_labels = ENCODER_MODEL.transform(&input_data);
 
     assert_eq!(ranked_cluster_labels[0], 8130);
 }

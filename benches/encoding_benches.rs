@@ -77,14 +77,13 @@ fn bench_cluster_assignment(b: &mut Bencher) {
         0, 0
     ];
 
-    let (encoder_model, encoder_graph) = load_encoder_model();
-    let centroids = load_cluster_centroids();
+    // Trigger pre-loading of encoder model prior to bench
+    let _ = ENCODER_MODEL.transform(&input_data);
 
     b.iter(|| {
-        let lf_array = encode(&encoder_model, &encoder_graph, &input_data);
-        let _ranked_cluster_labels = assign_cluster_labels(&centroids, &lf_array);
+        let _ = ENCODER_MODEL.transform(&input_data);
     });
 }
 
 // running 1 test
-// test bench_cluster_assignment ... bench:   2,753,353.12 ns/iter (+/- 149,222.81)
+// test bench_cluster_assignment ... bench:   2,700,489.55 ns/iter (+/- 132,472.72)

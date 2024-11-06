@@ -53,47 +53,68 @@ pub fn load_cluster_centroids() -> Tensor<f32> {
     tensor
 }
 
-pub fn assign_cluster_labels(centroids: Tensor<f32>, lf_array: Tensor<f32>) -> Tensor<f32> {
+pub fn assign_cluster_labels(centroids: Tensor<f32>, lf_array: Tensor<f32>) -> Tensor<i32> {
     let mut scope = Scope::new_root_scope();
     let mut run_args = SessionRunArgs::new();
 
     let centroids_input = ops::Placeholder::new()
         .dtype(DataType::Float)
         .shape(centroids.dims())
-        .build(&mut scope).unwrap();
+        .build(&mut scope)
+        .unwrap();
 
     let lf_input = ops::Placeholder::new()
         .dtype(DataType::Float)
         .shape(lf_array.dims())
-        .build(&mut scope).unwrap();
+        .build(&mut scope)
+        .unwrap();
 
     run_args.add_feed(&centroids_input, 0, &centroids);
     run_args.add_feed(&lf_input, 0, &lf_array);
 
     let diff = ops::Sub::new()
-        .build(centroids_input, lf_input, &mut scope).unwrap();
+        .build(centroids_input, lf_input, &mut scope)
+        .unwrap();
 
     let squared_diff = ops::Square::new()
-        .build(diff, &mut scope).unwrap();
+        .build(diff, &mut scope)
+        .unwrap();
 
-    let axis_tensor = ops::Const::new().dtype(DataType::Int32).value(Tensor::new(&[1]).with_values(&[1]).unwrap()).build(&mut scope).unwrap();
+    let axis_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[1]).with_values(&[1]).unwrap())
+        .build(&mut scope)
+        .unwrap();
 
     let mean_squared_diff = ops::Mean::new()
-        .build(squared_diff, axis_tensor, &mut scope).unwrap();
+        .build(squared_diff, axis_tensor, &mut scope)
+        .unwrap();
 
     let distance = ops::Sqrt::new()
-        .build(mean_squared_diff, &mut scope).unwrap();
+        .build(mean_squared_diff, &mut scope)
+        .unwrap();
+
+    let negated_distance = ops::Neg::new()
+        .build(distance, &mut scope)
+        .unwrap();
+
+    let k_tensor = ops::Const::new()
+        .dtype(DataType::Int64)
+        .value(centroids.dims()[0] as i64)
+        .build(&mut scope)
+        .unwrap();
+
+    let top_k = ops::TopKV2::new()
+        .build(negated_distance, k_tensor, &mut scope)
+        .unwrap();
 
     let graph = scope.graph();
     let session = Session::new(&SessionOptions::new(), &graph).unwrap();
 
-    let distance_token = run_args.request_fetch(&distance, 0);
+    let top_k_token = run_args.request_fetch(&top_k, 1);
     session.run(&mut run_args).unwrap();
 
-    let distance_tensor = run_args.fetch(distance_token).unwrap();
+    let ranked_cluster_labels = run_args.fetch(top_k_token).unwrap();
 
-
-    // At this point need to get argsort of distances and return labels
-
-    distance_tensor
+    ranked_cluster_labels
 }

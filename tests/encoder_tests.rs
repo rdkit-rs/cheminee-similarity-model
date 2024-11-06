@@ -76,8 +76,7 @@ fn test_encode() {
     let (encoder_model, encoder_graph) = load_encoder_model();
     let lf_array = encode(encoder_model, encoder_graph, input_data);
     let centroids = load_cluster_centroids();
+    let ranked_cluster_labels = assign_cluster_labels(centroids, lf_array);
 
-    let test = assign_cluster_labels(centroids, lf_array);
-
-    println!("{:?}", test);
+    assert_eq!(ranked_cluster_labels[0], 8130);
 }

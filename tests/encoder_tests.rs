@@ -73,7 +73,7 @@ fn test_encode() {
         0, 0
     ];
 
-    let ranked_cluster_labels = ENCODER_MODEL.transform(&input_data);
+    let ranked_cluster_labels = ENCODER_MODEL.transform(&input_data).unwrap();
 
     assert_eq!(ranked_cluster_labels[0], 8130);
 }

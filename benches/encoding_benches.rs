@@ -78,10 +78,10 @@ fn bench_cluster_assignment(b: &mut Bencher) {
     ];
 
     // Trigger pre-loading of encoder model prior to bench
-    let _ = ENCODER_MODEL.transform(&input_data);
+    let _ = ENCODER_MODEL.transform(&input_data).unwrap();
 
     b.iter(|| {
-        let _ = ENCODER_MODEL.transform(&input_data);
+        let _ = ENCODER_MODEL.transform(&input_data).unwrap();
     });
 }
 

@@ -86,4 +86,4 @@ fn bench_cluster_assignment(b: &mut Bencher) {
 }
 
 // running 1 test
-// test bench_cluster_assignment ... bench:   2,700,489.55 ns/iter (+/- 132,472.72)
+// test bench_cluster_assignment ... bench:   2,942,678.12 ns/iter (+/- 92,325.22)

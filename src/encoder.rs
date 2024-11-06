@@ -98,11 +98,7 @@ fn encode(model: &EncoderModel, input_data: &BitVec) -> Tensor<f32> {
     let output_token = run_args.request_fetch(&output_operation, 0);
     model.encoder.session.run(&mut run_args).unwrap();
 
-    let output_tensor = run_args.fetch(output_token).unwrap();
-    let output_slice = &output_tensor.iter().as_slice()[..128];
-    let lf_tensor = Tensor::new(&[1, 128]).with_values(output_slice).unwrap();
-
-    lf_tensor
+    run_args.fetch(output_token).unwrap()
 }
 
 pub fn assign_cluster_labels(centroids: &Tensor<f32>, lf_array: &Tensor<f32>) -> Vec<i32> {
@@ -124,8 +120,24 @@ pub fn assign_cluster_labels(centroids: &Tensor<f32>, lf_array: &Tensor<f32>) ->
     run_args.add_feed(&centroids_input, 0, &centroids);
     run_args.add_feed(&lf_input, 0, &lf_array);
 
+    let begin_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[2]).with_values(&[0, 0]).unwrap())
+        .build(&mut scope)
+        .unwrap();
+
+    let size_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[2]).with_values(&[1, 128]).unwrap())
+        .build(&mut scope)
+        .unwrap();
+
+    let lf_slice = ops::Slice::new()
+        .build(lf_input, begin_tensor, size_tensor, &mut scope)
+        .unwrap();
+
     let diff = ops::Sub::new()
-        .build(centroids_input, lf_input, &mut scope)
+        .build(centroids_input, lf_slice, &mut scope)
         .unwrap();
 
     let squared_diff = ops::Square::new()

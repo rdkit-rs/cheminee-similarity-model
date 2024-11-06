@@ -12,7 +12,7 @@ pub fn load_encoder_model() -> (SavedModelBundle, Graph) {
     (saved_model, graph)
 }
 
-pub fn encode(model: SavedModelBundle, graph: Graph, input_data: BitVec) -> Tensor<f32> {
+pub fn encode(model: &SavedModelBundle, graph: &Graph, input_data: &BitVec) -> Tensor<f32> {
     let input_data = input_data.iter().map(|b| if *b {1} else {0}).collect::<Vec<i64>>();
     let input_tensor = Tensor::new(&[1, input_data.len() as u64]).with_values(&input_data).unwrap();
 
@@ -53,7 +53,7 @@ pub fn load_cluster_centroids() -> Tensor<f32> {
     tensor
 }
 
-pub fn assign_cluster_labels(centroids: Tensor<f32>, lf_array: Tensor<f32>) -> Tensor<i32> {
+pub fn assign_cluster_labels(centroids: &Tensor<f32>, lf_array: &Tensor<f32>) -> Tensor<i32> {
     let mut scope = Scope::new_root_scope();
     let mut run_args = SessionRunArgs::new();
 

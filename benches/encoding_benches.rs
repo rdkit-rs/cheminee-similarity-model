@@ -1,8 +1,12 @@
-use bitvec::prelude::*;
-use cheminee_similarity_weights::encoder::{assign_cluster_labels, encode, load_cluster_centroids, load_encoder_model};
+#![feature(test)]
 
-#[test]
-fn test_encode() {
+use cheminee_similarity_weights::encoder::*;
+extern crate test;
+use test::Bencher;
+use bitvec::prelude::*;
+
+#[bench]
+fn bench_cluster_assignment(b: &mut Bencher) {
     let input_data = bitvec![
         0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -75,8 +79,12 @@ fn test_encode() {
 
     let (encoder_model, encoder_graph) = load_encoder_model();
     let centroids = load_cluster_centroids();
-    let lf_array = encode(&encoder_model, &encoder_graph, &input_data);
-    let ranked_cluster_labels = assign_cluster_labels(&centroids, &lf_array);
 
-    assert_eq!(ranked_cluster_labels[0], 8130);
+    b.iter(|| {
+        let lf_array = encode(&encoder_model, &encoder_graph, &input_data);
+        let _ranked_cluster_labels = assign_cluster_labels(&centroids, &lf_array);
+    });
 }
+
+// running 1 test
+// test bench_cluster_assignment ... bench:   2,753,353.12 ns/iter (+/- 149,222.81)

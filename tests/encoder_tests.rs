@@ -1,5 +1,5 @@
 use bitvec::prelude::*;
-use cheminee_similarity_weights::encoder::ENCODER_MODEL;
+use cheminee_similarity_model::encoder::ENCODER_MODEL;
 
 #[test]
 fn test_encode() {

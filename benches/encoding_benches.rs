@@ -1,6 +1,6 @@
 #![feature(test)]
 
-use cheminee_similarity_weights::encoder::*;
+use cheminee_similarity_model::encoder::*;
 extern crate test;
 use test::Bencher;
 use bitvec::prelude::*;

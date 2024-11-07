@@ -22,6 +22,10 @@ pub struct EncoderModel {
 }
 
 impl EncoderModel {
+    pub fn clone_model(&self) -> EncoderModel {
+        build_encoder_model()
+    }
+
     pub fn transform(&self, input_data: &BitVec) -> eyre::Result<Vec<i32>> {
         let lf_array = self.encode(input_data)?;
         let ranked_cluster_labels = self.assign_cluster_labels(&lf_array)?;

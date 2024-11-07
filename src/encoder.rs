@@ -15,6 +15,7 @@ pub struct EncoderModel {
     encoder: SavedModelBundle,
     graph: Graph,
     centroids: Tensor<f32>,
+    pub num_centroids: usize,
 }
 
 impl EncoderModel {
@@ -128,11 +129,13 @@ impl EncoderModel {
 pub fn build_encoder_model() -> EncoderModel {
     let (encoder, graph) = load_encoder_model().unwrap();
     let centroids = load_cluster_centroids().unwrap();
+    let num_centroids = centroids.dims()[0] as usize;
 
     EncoderModel {
         encoder,
         graph,
-        centroids
+        centroids,
+        num_centroids
     }
 }
 

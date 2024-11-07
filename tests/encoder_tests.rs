@@ -1,10 +1,13 @@
 use bitvec::prelude::*;
-use cheminee_similarity_model::encoder::ENCODER_MODEL;
+use cheminee_similarity_model::encoder::build_encoder_model;
 
 #[test]
 fn test_encoder_model_clone() {
-    let encoder_model = ENCODER_MODEL.clone_model();
+    let encoder_model = build_encoder_model();
+    let encoder_model_copy = encoder_model.clone_model();
     let first_cluster_value = encoder_model.centroids.get(&[0, 0]);
+    let first_cluster_value_copy = encoder_model_copy.centroids.get(&[0, 0]);
+    assert_eq!(first_cluster_value, first_cluster_value_copy);
     assert_eq!(format!("{:.3}", first_cluster_value), "-0.543");
 }
 
@@ -80,7 +83,8 @@ fn test_encode() {
         0, 0
     ];
 
-    let ranked_cluster_labels = ENCODER_MODEL.transform(&input_data).unwrap();
+    let encoder_model = build_encoder_model();
+    let ranked_cluster_labels = encoder_model.transform(&input_data).unwrap();
 
     assert_eq!(ranked_cluster_labels[0], 8130);
 }

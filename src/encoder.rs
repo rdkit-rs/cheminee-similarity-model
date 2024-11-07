@@ -11,10 +11,6 @@ const VARIABLES_INDEX: &[u8] = include_bytes!("../assets/vae_encoder/variables/v
 const VARIABLES_DATA: &[u8] = include_bytes!("../assets/vae_encoder/variables/variables.data-00000-of-00001");
 const CENTROID_STR: &str = include_str!("../assets/lf_kmeans_10k_centroids_20241025.csv");
 
-lazy_static::lazy_static! {
-    pub static ref ENCODER_MODEL: EncoderModel = build_encoder_model();
-}
-
 pub struct EncoderModel {
     pub encoder: SavedModelBundle,
     pub graph: Graph,
@@ -58,7 +54,7 @@ impl EncoderModel {
         Ok(output_tensor)
     }
 
-    pub fn assign_cluster_labels(&self, lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
+    fn assign_cluster_labels(&self, lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
         let mut scope = Scope::new_root_scope();
         let mut run_args = SessionRunArgs::new();
 
@@ -129,7 +125,7 @@ impl EncoderModel {
     }
 }
 
-fn build_encoder_model() -> EncoderModel {
+pub fn build_encoder_model() -> EncoderModel {
     let (encoder, graph) = load_encoder_model().unwrap();
     let centroids = load_cluster_centroids().unwrap();
 

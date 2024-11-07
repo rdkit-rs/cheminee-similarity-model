@@ -1,9 +1,19 @@
 #![feature(test)]
 
-use cheminee_similarity_model::encoder::*;
+use cheminee_similarity_model::encoder::build_encoder_model;
 extern crate test;
 use test::Bencher;
 use bitvec::prelude::*;
+
+#[bench]
+fn bench_build_encoder_model(b: &mut Bencher) {
+    b.iter(|| {
+        let _ = build_encoder_model();
+    });
+}
+
+// running 1 test
+// test bench_build_encoder_model ... bench:  76,236,845.80 ns/iter (+/- 3,119,651.60)
 
 #[bench]
 fn bench_cluster_assignment(b: &mut Bencher) {
@@ -78,12 +88,12 @@ fn bench_cluster_assignment(b: &mut Bencher) {
     ];
 
     // Trigger pre-loading of encoder model prior to bench
-    let _ = ENCODER_MODEL.transform(&input_data).unwrap();
+    let encoder_model = build_encoder_model();
 
     b.iter(|| {
-        let _ = ENCODER_MODEL.transform(&input_data).unwrap();
+        let _ = encoder_model.transform(&input_data).unwrap();
     });
 }
 
 // running 1 test
-// test bench_cluster_assignment ... bench:   2,942,678.12 ns/iter (+/- 92,325.22)
+// test bench_cluster_assignment ... bench:   2,987,152.10 ns/iter (+/- 102,746.04)

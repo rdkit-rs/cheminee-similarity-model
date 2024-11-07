@@ -2,16 +2,6 @@ use bitvec::prelude::*;
 use cheminee_similarity_model::encoder::build_encoder_model;
 
 #[test]
-fn test_encoder_model_clone() {
-    let encoder_model = build_encoder_model();
-    let encoder_model_copy = encoder_model.clone_model();
-    let first_cluster_value = encoder_model.centroids.get(&[0, 0]);
-    let first_cluster_value_copy = encoder_model_copy.centroids.get(&[0, 0]);
-    assert_eq!(first_cluster_value, first_cluster_value_copy);
-    assert_eq!(format!("{:.3}", first_cluster_value), "-0.543");
-}
-
-#[test]
 fn test_encode() {
     let input_data = bitvec![
         0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

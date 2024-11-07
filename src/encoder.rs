@@ -12,9 +12,9 @@ const VARIABLES_DATA: &[u8] = include_bytes!("../assets/vae_encoder/variables/va
 const CENTROID_STR: &str = include_str!("../assets/lf_kmeans_10k_centroids_20241025.csv");
 
 pub struct EncoderModel {
-    pub encoder: SavedModelBundle,
-    pub graph: Graph,
-    pub centroids: Tensor<f32>,
+    encoder: SavedModelBundle,
+    graph: Graph,
+    centroids: Tensor<f32>,
 }
 
 impl EncoderModel {

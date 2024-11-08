@@ -135,7 +135,7 @@ pub fn build_encoder_model() -> eyre::Result<EncoderModel> {
 }
 
 fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
-    let centroid_content = read_to_string("assets/lf_kmeans_10k_centroids_20241025.csv")?;
+    let centroid_content = read_to_string("assets/lf_kmeans_10k_centroids_20241108.csv")?;
 
     let centroid_vec = centroid_content
         .lines()

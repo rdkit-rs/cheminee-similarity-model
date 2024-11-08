@@ -8,7 +8,7 @@ use bitvec::prelude::*;
 #[bench]
 fn bench_build_encoder_model(b: &mut Bencher) {
     b.iter(|| {
-        let _ = build_encoder_model();
+        let _ = build_encoder_model().unwrap();
     });
 }
 
@@ -88,7 +88,7 @@ fn bench_cluster_assignment(b: &mut Bencher) {
     ];
 
     // Trigger pre-loading of encoder model prior to bench
-    let encoder_model = build_encoder_model();
+    let encoder_model = build_encoder_model().unwrap();
 
     b.iter(|| {
         let _ = encoder_model.transform(&input_data).unwrap();

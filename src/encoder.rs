@@ -1,15 +1,8 @@
-use std::fs::File;
-use std::io::Write;
-use tempfile::{tempdir, TempDir};
+use std::fs::read_to_string;
 use ndarray::Array2;
 use std::str::FromStr;
 use bitvec::vec::BitVec;
 use tensorflow::{DataType, Graph, ops, SavedModelBundle, Scope, Session, SessionOptions, SessionRunArgs, Tensor};
-
-const SAVED_MODEL_PB: &[u8] = include_bytes!("../assets/vae_encoder/saved_model.pb");
-const VARIABLES_INDEX: &[u8] = include_bytes!("../assets/vae_encoder/variables/variables.index");
-const VARIABLES_DATA: &[u8] = include_bytes!("../assets/vae_encoder/variables/variables.data-00000-of-00001");
-const CENTROID_STR: &str = include_str!("../assets/lf_kmeans_10k_centroids_20241025.csv");
 
 pub struct EncoderModel {
     encoder: SavedModelBundle,
@@ -19,7 +12,7 @@ pub struct EncoderModel {
 }
 
 impl EncoderModel {
-    pub fn clone_model(&self) -> EncoderModel {
+    pub fn clone_model(&self) -> eyre::Result<EncoderModel> {
         build_encoder_model()
     }
 
@@ -126,21 +119,25 @@ impl EncoderModel {
     }
 }
 
-pub fn build_encoder_model() -> EncoderModel {
-    let (encoder, graph) = load_encoder_model().unwrap();
-    let centroids = load_cluster_centroids().unwrap();
+pub fn build_encoder_model() -> eyre::Result<EncoderModel> {
+    let (encoder, graph) = load_encoder_model()?;
+    let centroids = load_cluster_centroids()?;
     let num_centroids = centroids.dims()[0] as usize;
 
-    EncoderModel {
-        encoder,
-        graph,
-        centroids,
-        num_centroids
-    }
+    Ok(
+        EncoderModel {
+            encoder,
+            graph,
+            centroids,
+            num_centroids
+        }
+    )
 }
 
 fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
-    let centroid_vec = CENTROID_STR
+    let centroid_content = read_to_string("assets/lf_kmeans_10k_centroids_20241025.csv")?;
+
+    let centroid_vec = centroid_content
         .lines()
         .map(|line| {
             line.split(',')
@@ -161,33 +158,7 @@ fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
 fn load_encoder_model() -> eyre::Result<(SavedModelBundle, Graph)> {
     let session_options = SessionOptions::new();
     let mut graph = Graph::new();
-    let temp_dir = model_bytes_to_tempdir()?;
-    let temp_dir_path = temp_dir
-        .path()
-        .to_str()
-        .ok_or(eyre::eyre!("Failed to convert path to str"))?;
-
-    let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, temp_dir_path)?;
+    let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, "assets/vae_encoder")?;
 
     Ok((saved_model, graph))
-}
-
-fn model_bytes_to_tempdir() -> eyre::Result<TempDir> {
-    let temp_dir = tempdir()?;
-    let model_path = temp_dir.path().join("saved_model.pb");
-    let mut saved_model_file = File::create(&model_path)?;
-    saved_model_file.write_all(SAVED_MODEL_PB)?;
-
-    let variables_dir = temp_dir.path().join("variables");
-    std::fs::create_dir_all(&variables_dir)?;
-    let variables_index_path = variables_dir.join("variables.index");
-    let variables_data_path = variables_dir.join("variables.data-00000-of-00001");
-
-    let mut variables_index_file = File::create(&variables_index_path)?;
-    variables_index_file.write_all(VARIABLES_INDEX)?;
-
-    let mut variables_data_file = File::create(&variables_data_path)?;
-    variables_data_file.write_all(VARIABLES_DATA)?;
-
-    Ok(temp_dir)
 }

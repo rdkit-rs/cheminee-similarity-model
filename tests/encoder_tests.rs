@@ -73,7 +73,7 @@ fn test_encode() {
         0, 0
     ];
 
-    let encoder_model = build_encoder_model();
+    let encoder_model = build_encoder_model().unwrap();
     let ranked_cluster_labels = encoder_model.transform(&input_data).unwrap();
 
     assert_eq!(encoder_model.num_centroids, 10000);

@@ -73,6 +73,8 @@ fn test_encode() {
         0, 0
     ];
 
+    println!("{:?}", std::env::current_dir());
+
     let encoder_model = build_encoder_model().unwrap();
     let ranked_cluster_labels = encoder_model.transform(&input_data).unwrap();
 

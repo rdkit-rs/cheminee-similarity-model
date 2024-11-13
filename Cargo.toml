@@ -6,7 +6,12 @@ edition = "2021"
 [dependencies]
 bitvec = "1"
 eyre = "0"
-lazy_static = "1.5.0"
-ndarray = "0.16.1"
-tempfile = "3.13.0"
-tensorflow = "0.21.0"
+lazy_static = "1.5"
+ndarray = "0.16"
+tempfile = "3.13"
+tensorflow = "0.21"
+
+[build-dependencies]
+flate2 = "1.0"
+reqwest = { version = "0.12", features = ["blocking"] }
+tar = "0.4"

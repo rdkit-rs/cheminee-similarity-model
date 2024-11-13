@@ -1,4 +1,3 @@
-use std::fs::read_to_string;
 use ndarray::Array2;
 use std::str::FromStr;
 use bitvec::vec::BitVec;
@@ -7,8 +6,14 @@ use tensorflow::{DataType, Graph, ops, SavedModelBundle, Scope, Session, Session
 pub struct EncoderModel {
     encoder: SavedModelBundle,
     graph: Graph,
-    centroids: Tensor<f32>,
     pub num_centroids: usize,
+}
+
+const CENTROIDS_STR: &str = include_str!("../target/assets/lf_kmeans_10k_centroids_20241111.csv");
+
+
+lazy_static::lazy_static! {
+    static ref CENTROIDS: Tensor<f32> = load_cluster_centroids().unwrap();
 }
 
 impl EncoderModel {
@@ -18,7 +23,7 @@ impl EncoderModel {
 
     pub fn transform(&self, input_data: &BitVec) -> eyre::Result<Vec<i32>> {
         let lf_array = self.encode(input_data)?;
-        let ranked_cluster_labels = self.assign_cluster_labels(&lf_array)?;
+        let ranked_cluster_labels = assign_cluster_labels(&lf_array)?;
 
         Ok(ranked_cluster_labels)
     }
@@ -47,76 +52,6 @@ impl EncoderModel {
 
         Ok(output_tensor)
     }
-
-    fn assign_cluster_labels(&self, lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
-        let mut scope = Scope::new_root_scope();
-        let mut run_args = SessionRunArgs::new();
-
-        let centroids_input = ops::Placeholder::new()
-            .dtype(DataType::Float)
-            .shape(self.centroids.dims())
-            .build(&mut scope)?;
-
-        let lf_input = ops::Placeholder::new()
-            .dtype(DataType::Float)
-            .shape(lf_array.dims())
-            .build(&mut scope)?;
-
-        run_args.add_feed(&centroids_input, 0, &self.centroids);
-        run_args.add_feed(&lf_input, 0, lf_array);
-
-        let begin_tensor = ops::Const::new()
-            .dtype(DataType::Int32)
-            .value(Tensor::new(&[2]).with_values(&[0, 0])?)
-            .build(&mut scope)?;
-
-        let size_tensor = ops::Const::new()
-            .dtype(DataType::Int32)
-            .value(Tensor::new(&[2]).with_values(&[1, 128])?)
-            .build(&mut scope)?;
-
-        let lf_slice = ops::Slice::new()
-            .build(lf_input, begin_tensor, size_tensor, &mut scope)?;
-
-        let diff = ops::Sub::new()
-            .build(centroids_input, lf_slice, &mut scope)?;
-
-        let squared_diff = ops::Square::new()
-            .build(diff, &mut scope)?;
-
-        let axis_tensor = ops::Const::new()
-            .dtype(DataType::Int32)
-            .value(Tensor::new(&[1]).with_values(&[1])?)
-            .build(&mut scope)?;
-
-        let mean_squared_diff = ops::Mean::new()
-            .build(squared_diff, axis_tensor, &mut scope)?;
-
-        let distance = ops::Sqrt::new()
-            .build(mean_squared_diff, &mut scope)?;
-
-        let negated_distance = ops::Neg::new()
-            .build(distance, &mut scope)?;
-
-        let k_tensor = ops::Const::new()
-            .dtype(DataType::Int64)
-            .value(self.centroids.dims()[0] as i64)
-            .build(&mut scope)?;
-
-        let top_k = ops::TopKV2::new()
-            .build(negated_distance, k_tensor, &mut scope)?;
-
-        let graph = scope.graph();
-        let session = Session::new(&SessionOptions::new(), &graph)?;
-
-        let top_k_token = run_args.request_fetch(&top_k, 1);
-        session.run(&mut run_args)?;
-
-        let ranked_cluster_labels = run_args.fetch(top_k_token)?;
-        let ranked_cluster_labels = ranked_cluster_labels.iter().as_slice().to_vec();
-
-        Ok(ranked_cluster_labels)
-    }
 }
 
 pub fn build_encoder_model() -> eyre::Result<EncoderModel> {
@@ -128,16 +63,83 @@ pub fn build_encoder_model() -> eyre::Result<EncoderModel> {
         EncoderModel {
             encoder,
             graph,
-            centroids,
             num_centroids
         }
     )
 }
 
-fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
-    let centroid_content = read_to_string("assets/lf_kmeans_10k_centroids_20241111.csv")?;
+fn assign_cluster_labels(lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
+    let mut scope = Scope::new_root_scope();
+    let mut run_args = SessionRunArgs::new();
 
-    let centroid_vec = centroid_content
+    let centroids_input = ops::Placeholder::new()
+        .dtype(DataType::Float)
+        .shape(CENTROIDS.dims())
+        .build(&mut scope)?;
+
+    let lf_input = ops::Placeholder::new()
+        .dtype(DataType::Float)
+        .shape(lf_array.dims())
+        .build(&mut scope)?;
+
+    run_args.add_feed(&centroids_input, 0, &CENTROIDS);
+    run_args.add_feed(&lf_input, 0, lf_array);
+
+    let begin_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[2]).with_values(&[0, 0])?)
+        .build(&mut scope)?;
+
+    let size_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[2]).with_values(&[1, 128])?)
+        .build(&mut scope)?;
+
+    let lf_slice = ops::Slice::new()
+        .build(lf_input, begin_tensor, size_tensor, &mut scope)?;
+
+    let diff = ops::Sub::new()
+        .build(centroids_input, lf_slice, &mut scope)?;
+
+    let squared_diff = ops::Square::new()
+        .build(diff, &mut scope)?;
+
+    let axis_tensor = ops::Const::new()
+        .dtype(DataType::Int32)
+        .value(Tensor::new(&[1]).with_values(&[1])?)
+        .build(&mut scope)?;
+
+    let mean_squared_diff = ops::Mean::new()
+        .build(squared_diff, axis_tensor, &mut scope)?;
+
+    let distance = ops::Sqrt::new()
+        .build(mean_squared_diff, &mut scope)?;
+
+    let negated_distance = ops::Neg::new()
+        .build(distance, &mut scope)?;
+
+    let k_tensor = ops::Const::new()
+        .dtype(DataType::Int64)
+        .value(CENTROIDS.dims()[0] as i64)
+        .build(&mut scope)?;
+
+    let top_k = ops::TopKV2::new()
+        .build(negated_distance, k_tensor, &mut scope)?;
+
+    let graph = scope.graph();
+    let session = Session::new(&SessionOptions::new(), &graph)?;
+
+    let top_k_token = run_args.request_fetch(&top_k, 1);
+    session.run(&mut run_args)?;
+
+    let ranked_cluster_labels = run_args.fetch(top_k_token)?;
+    let ranked_cluster_labels = ranked_cluster_labels.iter().as_slice().to_vec();
+
+    Ok(ranked_cluster_labels)
+}
+
+fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
+    let centroid_vec = CENTROIDS_STR
         .lines()
         .map(|line| {
             line.split(',')
@@ -158,7 +160,7 @@ fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
 fn load_encoder_model() -> eyre::Result<(SavedModelBundle, Graph)> {
     let session_options = SessionOptions::new();
     let mut graph = Graph::new();
-    let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, "assets/vae_encoder")?;
+    let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, "../target/assets/vae_encoder")?;
 
     Ok((saved_model, graph))
 }

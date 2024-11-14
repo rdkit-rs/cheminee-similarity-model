@@ -11,6 +11,7 @@ pub struct EncoderModel {
 }
 
 lazy_static::lazy_static! {
+    static ref ASSETS_PATH: String = get_assets_path().unwrap();
     static ref CENTROIDS: Tensor<f32> = load_cluster_centroids().unwrap();
 }
 
@@ -137,7 +138,7 @@ fn assign_cluster_labels(lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
 }
 
 fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
-    let centroids_path = format!("{}/lf_kmeans_10k_centroids_20241111.csv", get_assets_path()?);
+    let centroids_path = format!("{}/lf_kmeans_10k_centroids_20241111.csv", ASSETS_PATH.as_str());
 
     let centroid_vec = read_to_string(centroids_path)?
         .lines()
@@ -160,11 +161,7 @@ fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
 fn load_encoder_model() -> eyre::Result<(SavedModelBundle, Graph)> {
     let session_options = SessionOptions::new();
     let mut graph = Graph::new();
-    let model_dir = format!("{}/vae_encoder", get_assets_path()?);
-
-    println!("{:?}", std::env::current_dir());
-    println!("{:?}", std::env::var("CARGO_MANIFEST_DIR"));
-
+    let model_dir = format!("{}/vae_encoder", ASSETS_PATH.as_str());
     let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, model_dir)?;
 
     Ok((saved_model, graph))

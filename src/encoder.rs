@@ -137,7 +137,7 @@ fn assign_cluster_labels(lf_array: &Tensor<f32>) -> eyre::Result<Vec<i32>> {
 }
 
 fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
-    let centroids_path = format!("{}/lf_kmeans_10k_centroids_20241111.csv", get_assets_dir()?);
+    let centroids_path = format!("{}/lf_kmeans_10k_centroids_20241111.csv", get_assets_path()?);
 
     let centroid_vec = read_to_string(centroids_path)?
         .lines()
@@ -160,14 +160,53 @@ fn load_cluster_centroids() -> eyre::Result<Tensor<f32>> {
 fn load_encoder_model() -> eyre::Result<(SavedModelBundle, Graph)> {
     let session_options = SessionOptions::new();
     let mut graph = Graph::new();
-    let model_dir = format!("{}/vae_encoder", get_assets_dir()?);
+    let model_dir = format!("{}/vae_encoder", get_assets_path()?);
+
+    println!("{:?}", std::env::current_dir());
+    println!("{:?}", std::env::var("CARGO_MANIFEST_DIR"));
+
     let saved_model = SavedModelBundle::load(&session_options, vec!["serve"], &mut graph, model_dir)?;
 
     Ok((saved_model, graph))
 }
 
-pub fn get_assets_dir() -> eyre::Result<String> {
+pub fn get_assets_path() -> eyre::Result<String> {
     let crate_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-    let assets_dir = format!("{}/target/assets", crate_dir);
-    Ok(assets_dir)
+    let target_dir = format!("{}/target", crate_dir);
+    let build_type = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+
+    let build_dir = format!("{}/{}/build", target_dir, build_type);
+    let entries = std::fs::read_dir(build_dir)?;
+
+    let mut assets_path = "".to_string();
+    for entry in entries {
+        match entry {
+            Ok(entry) => {
+                let path = entry.path();
+
+                if path.is_dir() {
+                    if let Some(dir_name) = path.file_name() {
+                        if dir_name.to_string_lossy().starts_with("cheminee-similarity-model-") {
+                            let out_dir = path.join("out");
+                            if out_dir.is_dir() {
+                                let out_path = out_dir.to_string_lossy().to_string();
+                                assets_path = format!("{}/assets", out_path);
+                            }
+                        }
+                    }
+                }
+            },
+            Err(e) => return Err(eyre::eyre!("Caught an exception while searching for the assets path: {}", e))
+        }
+    }
+
+    if assets_path.is_empty() {
+        return Err(eyre::eyre!("Failed to find assets path"))
+    }
+
+    Ok(assets_path)
 }

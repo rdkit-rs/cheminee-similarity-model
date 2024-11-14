@@ -9,13 +9,14 @@ fn main() {
         .bytes()
         .expect("Failed to retrieve bytes");
 
-    let tar_gz_path = "target/similarity-0.1.0.tar.gz";
+    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR is not set");
+    let tar_gz_path = format!("{}/similarity-0.1.0.tar.gz", &out_dir);
 
-    std::fs::write(tar_gz_path, asset_bytes).expect("Failed to write tar file");
+    std::fs::write(&tar_gz_path, asset_bytes).expect("Failed to write tar file");
 
-    let tar_gz_file = File::open(tar_gz_path).expect("Failed to open tar file");
+    let tar_gz_file = File::open(&tar_gz_path).expect("Failed to open tar file");
     let decoder = GzDecoder::new(BufReader::new(tar_gz_file));
 
     let mut archive = Archive::new(decoder);
-    archive.unpack("target").expect("Failed to unpack tar ball");
+    archive.unpack(out_dir).expect("Failed to unpack tar ball");
 }

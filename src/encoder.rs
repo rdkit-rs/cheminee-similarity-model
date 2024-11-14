@@ -1,7 +1,6 @@
 use std::fs::read_to_string;
 use ndarray::Array2;
 use std::str::FromStr;
-use bitvec::vec::BitVec;
 use tensorflow::{DataType, Graph, ops, SavedModelBundle, Scope, Session, SessionOptions, SessionRunArgs, Tensor};
 
 pub struct EncoderModel {
@@ -20,15 +19,15 @@ impl EncoderModel {
         build_encoder_model()
     }
 
-    pub fn transform(&self, input_data: &BitVec) -> eyre::Result<Vec<i32>> {
+    pub fn transform(&self, input_data: &[u8]) -> eyre::Result<Vec<i32>> {
         let lf_array = self.encode(input_data)?;
         let ranked_cluster_labels = assign_cluster_labels(&lf_array)?;
 
         Ok(ranked_cluster_labels)
     }
 
-    fn encode(&self, input_data: &BitVec) -> eyre::Result<Tensor<f32>> {
-        let input_data = input_data.iter().map(|b| if *b {1} else {0}).collect::<Vec<i64>>();
+    fn encode(&self, input_data: &[u8]) -> eyre::Result<Tensor<f32>> {
+        let input_data = input_data.iter().map(|v| *v as i64).collect::<Vec<i64>>();
         let input_tensor = Tensor::new(&[1, input_data.len() as u64]).with_values(&input_data)?;
 
         let input_operation = self

@@ -3,7 +3,6 @@
 use cheminee_similarity_model::encoder::build_encoder_model;
 extern crate test;
 use test::Bencher;
-use bitvec::prelude::*;
 
 #[bench]
 fn bench_build_encoder_model(b: &mut Bencher) {
@@ -13,11 +12,11 @@ fn bench_build_encoder_model(b: &mut Bencher) {
 }
 
 // running 1 test
-// test bench_build_encoder_model ... bench:  76,236,845.80 ns/iter (+/- 3,119,651.60)
+// test bench_build_encoder_model ... bench:  62,794,445.80 ns/iter (+/- 1,892,022.91)
 
 #[bench]
 fn bench_cluster_assignment(b: &mut Bencher) {
-    let input_data = bitvec![
+    let input_data = vec![
         0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -96,4 +95,4 @@ fn bench_cluster_assignment(b: &mut Bencher) {
 }
 
 // running 1 test
-// test bench_cluster_assignment ... bench:   2,987,152.10 ns/iter (+/- 102,746.04)
+// test bench_cluster_assignment ... bench:   3,195,305.23 ns/iter (+/- 585,409.38)

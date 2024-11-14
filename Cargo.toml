@@ -2,6 +2,10 @@
 name = "cheminee-similarity-model"
 version = "0.1.0"
 edition = "2021"
+description = "Builds a Morgan fingerprint encoder model to accelerate similarity searches"
+license = "MIT"
+documentation = "https://github.com/rdkit-rs/cheminee-similarity-model"
+repository = "https://github.com/rdkit-rs/cheminee-similarity-model"
 
 [dependencies]
 bitvec = "1"

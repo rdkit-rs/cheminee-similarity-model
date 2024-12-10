@@ -12,7 +12,7 @@ fn bench_build_encoder_model(b: &mut Bencher) {
 }
 
 // running 1 test
-// test bench_build_encoder_model ... bench:  62,794,445.80 ns/iter (+/- 1,892,022.91)
+// test bench_build_encoder_model ... bench:  22,392,066.70 ns/iter (+/- 1,059,861.72)
 
 #[bench]
 fn bench_cluster_assignment(b: &mut Bencher) {
@@ -95,4 +95,4 @@ fn bench_cluster_assignment(b: &mut Bencher) {
 }
 
 // running 1 test
-// test bench_cluster_assignment ... bench:   3,195,305.23 ns/iter (+/- 585,409.38)
+// test bench_cluster_assignment  ... bench:   3,063,854.17 ns/iter (+/- 477,969.81)

@@ -6,19 +6,15 @@ use tensorflow::{DataType, Graph, ops, SavedModelBundle, Scope, Session, Session
 pub struct EncoderModel {
     encoder: SavedModelBundle,
     graph: Graph,
-    pub num_centroids: usize,
 }
 
 lazy_static::lazy_static! {
     static ref ASSETS_PATH: String = get_assets_path().unwrap();
     static ref CENTROIDS: Tensor<f32> = load_cluster_centroids().unwrap();
+    pub static ref NUM_CLUSTERS: f32 = CENTROIDS.dims()[0] as f32;
 }
 
 impl EncoderModel {
-    pub fn clone_model(&self) -> eyre::Result<EncoderModel> {
-        build_encoder_model()
-    }
-
     pub fn transform(&self, input_data: &[u8]) -> eyre::Result<Vec<i32>> {
         let lf_array = self.encode(input_data)?;
         let ranked_cluster_labels = assign_cluster_labels(&lf_array)?;
@@ -28,6 +24,7 @@ impl EncoderModel {
 
     fn encode(&self, input_data: &[u8]) -> eyre::Result<Tensor<f32>> {
         let input_data = input_data.iter().map(|v| *v as i64).collect::<Vec<i64>>();
+
         let input_tensor = Tensor::new(&[1, input_data.len() as u64]).with_values(&input_data)?;
 
         let input_operation = self
@@ -47,21 +44,17 @@ impl EncoderModel {
         self.encoder.session.run(&mut run_args)?;
 
         let output_tensor = run_args.fetch(output_token)?;
-
         Ok(output_tensor)
     }
 }
 
 pub fn build_encoder_model() -> eyre::Result<EncoderModel> {
     let (encoder, graph) = load_encoder_model()?;
-    let centroids = load_cluster_centroids()?;
-    let num_centroids = centroids.dims()[0] as usize;
 
     Ok(
         EncoderModel {
             encoder,
             graph,
-            num_centroids
         }
     )
 }

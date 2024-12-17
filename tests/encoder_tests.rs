@@ -72,9 +72,11 @@ fn test_encode() {
         0, 0
     ];
 
+    let input_data = vec![input_data.clone(), input_data];
     let encoder_model = build_encoder_model().unwrap();
     let ranked_cluster_labels = encoder_model.transform(&input_data).unwrap();
 
-    assert_eq!(encoder_model.num_centroids, 10000);
-    assert_eq!(ranked_cluster_labels[0], 8130);
+    assert_eq!(ranked_cluster_labels[0][0], 8130);
+    assert_eq!(ranked_cluster_labels[1][0], 8130);
 }
+

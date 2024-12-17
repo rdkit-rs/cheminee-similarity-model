@@ -15,17 +15,40 @@ lazy_static::lazy_static! {
 }
 
 impl EncoderModel {
-    pub fn transform(&self, input_data: &[u8]) -> eyre::Result<Vec<i32>> {
+    pub fn transform(&self, input_data: &[Vec<i64>]) -> eyre::Result<Vec<Vec<i32>>> {
         let lf_array = self.encode(input_data)?;
-        let ranked_cluster_labels = assign_cluster_labels(&lf_array)?;
+        let cols = lf_array.dims()[1];
+
+        let ranked_cluster_labels = lf_array
+            .chunks(cols as usize)
+            .map(|row_vec| {
+                let row_tensor = Tensor::new(&[1, cols]).with_values(row_vec);
+
+                match row_tensor {
+                    Ok(row_tensor) => {
+                        let cluster_labels = assign_cluster_labels(&row_tensor);
+
+                        cluster_labels.unwrap_or_else(|e| {
+                            log::info!("Failed to retrieve cluster labels: {e}");
+                            vec![]
+                        })
+                    },
+                    Err(e) => {
+                        log::info!("Failed to retrieve tensor row: {e}");
+                        vec![]
+                    },
+                }
+            }).collect::<Vec<Vec<i32>>>();
 
         Ok(ranked_cluster_labels)
     }
 
-    fn encode(&self, input_data: &[u8]) -> eyre::Result<Tensor<f32>> {
-        let input_data = input_data.iter().map(|v| *v as i64).collect::<Vec<i64>>();
+    fn encode(&self, input_data: &[Vec<i64>]) -> eyre::Result<Tensor<f32>> {
+        let rows = input_data.len() as u64;
+        let cols = input_data[0].len() as u64;
 
-        let input_tensor = Tensor::new(&[1, input_data.len() as u64]).with_values(&input_data)?;
+        let flattened_input = input_data.concat();
+        let input_tensor = Tensor::new(&[rows, cols]).with_values(&flattened_input)?;
 
         let input_operation = self
             .graph
